@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ponponkonkon4-rgb.github.io/taro-japan-Public/sitemap.xml
