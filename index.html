@@ -84,6 +84,47 @@ details.node[open ] .n-toggle{transform:rotate(45deg)}
 .branch b{font-size:15px;line-height:1.35;display:block}
 .branch small{color:var(--sub);font-size:12.5px;line-height:1.45;display:block}
 .branch .go{margin-left:auto;flex:0 0 auto}
+
+/* ===== Animation layer (added 2026-11-25) ===== */
+#scroll-progress{position:fixed;top:0;left:0;height:4px;width:100%;background:linear-gradient(90deg,#f76707,#ffa94d,#ffe08a);transform-origin:0 50%;transform:scaleX(0);z-index:200;border-radius:0 3px 3px 0}
+@keyframes fadeUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{opacity:0;transform:scale(.6) rotate(-8deg)}70%{transform:scale(1.08) rotate(-2deg)}100%{opacity:1;transform:scale(1) rotate(-3deg)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes drift{0%,100%{transform:rotate(-18deg) translate(0,0)}50%{transform:rotate(-12deg) translate(-10px,-14px)}}
+@keyframes drift2{0%,100%{transform:rotate(14deg) translate(0,0)}50%{transform:rotate(20deg) translate(8px,10px)}}
+@keyframes pawBounce{0%{transform:scale(1)}35%{transform:scale(1.45) rotate(-12deg)}70%{transform:scale(.92)}100%{transform:scale(1)}}
+.hero-txt>*{animation:fadeUp .8s cubic-bezier(.2,.7,.3,1) both}
+.hero-txt>*:nth-child(2){animation-delay:.12s}
+.hero-txt>*:nth-child(3){animation-delay:.24s}
+.hero-maro img{animation:floaty 5s ease-in-out infinite}
+.hero-maro{animation:fadeUp .8s .2s cubic-bezier(.2,.7,.3,1) both}
+.bubble{animation:popIn .6s .55s cubic-bezier(.2,.7,.3,1) both}
+.pawbg{animation:drift 11s ease-in-out infinite}
+.pawbg2{animation:drift2 13s ease-in-out infinite}
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s ease var(--d,0s),transform .7s cubic-bezier(.2,.7,.3,1) var(--d,0s)}
+.rv.in{opacity:1;transform:translateY(0)}
+h2.sec.rv.in::before{animation:pawBounce .6s .15s ease}
+.entry{overflow:hidden}
+.entry .e-img{transition:transform .5s cubic-bezier(.2,.7,.3,1)}
+.entry:hover .e-img{transform:scale(1.045)}
+.branch{transition:background .2s ease,transform .25s ease}
+.branch:hover{transform:translateX(5px)}
+.branch img{transition:transform .4s ease}
+.branch:hover img{transform:scale(1.07)}
+.chip{position:relative;overflow:hidden;transition:transform .2s ease,background .2s ease}
+.chip:hover{transform:translateY(-3px);background:rgba(255,255,255,.32)}
+.chip::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);transition:left .55s ease}
+.chip:hover::after{left:130%}
+.sns a{transition:transform .2s ease,box-shadow .2s ease}
+.sns a:hover{transform:translateY(-3px);box-shadow:0 8px 16px rgba(180,90,20,.16)}
+.mini-maro{animation:floaty 4.5s ease-in-out infinite}
+#toTop{position:fixed;right:14px;bottom:82px;width:46px;height:46px;border:none;border-radius:50%;background:var(--accent);color:#fff;font-size:19px;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(180,90,20,.35);opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .3s ease,transform .3s ease;z-index:60}
+#toTop.show{opacity:1;transform:translateY(0);pointer-events:auto}
+#toTop:hover{background:var(--accent-d)}
+@media (prefers-reduced-motion: reduce){
+ *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+ .rv{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
@@ -147,6 +188,51 @@ document.addEventListener('pointerdown', function(e) {
   document.body.appendChild(s);
   setTimeout(function() { s.remove(); }, 1180);
 });
+</script>
+<script>
+// ===== Animation layer JS (added 2026-11-25) =====
+(function(){
+  // scroll progress bar + back-to-top visibility
+  var bar = document.createElement('div'); bar.id = 'scroll-progress'; document.body.appendChild(bar);
+  var toTop = document.createElement('button'); toTop.id = 'toTop'; toTop.textContent = '↑'; toTop.setAttribute('aria-label','トップへ戻る');
+  document.body.appendChild(toTop);
+  toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+  var ticking = false;
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.transform = 'scaleX(' + (max > 0 ? (h.scrollTop / max) : 0) + ')';
+    toTop.classList.toggle('show', h.scrollTop > 600);
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){ if(!ticking){ ticking = true; requestAnimationFrame(onScroll); } }, {passive:true});
+  onScroll();
+  // reveal on scroll, staggered within each group
+  var targets = document.querySelectorAll('h2.sec, .sec-sub, details.node, .entry, .sns h2, .sns-links a, footer p');
+  targets.forEach(function(el){
+    el.classList.add('rv');
+    var sib = Array.prototype.indexOf.call(el.parentNode.children, el);
+    el.style.setProperty('--d', Math.min(sib, 5) * 0.07 + 's');
+  });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, {threshold: 0.1});
+  targets.forEach(function(el){ io.observe(el); });
+  // soft reveal when an accordion node opens
+  document.querySelectorAll('details.node').forEach(function(node){
+    node.addEventListener('toggle', function(){
+      if(node.open){
+        var br = node.querySelector('.branches');
+        if(br && br.animate){
+          br.animate([{opacity:0, transform:'translateY(-8px)'},{opacity:1, transform:'translateY(0)'}], {duration:380, easing:'cubic-bezier(.2,.7,.3,1)'});
+          br.querySelectorAll('.branch').forEach(function(b, i){
+            b.animate([{opacity:0, transform:'translateX(-10px)'},{opacity:1, transform:'translateX(0)'}], {duration:340, delay: 60 + i*70, easing:'ease-out', fill:'backwards'});
+          });
+        }
+      }
+    });
+  });
+})();
 </script>
 </body>
 </html>
